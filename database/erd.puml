@@ -1,0 +1,259 @@
+@startuml
+!define GUID "UNIQUEIDENTIFIER"
+!define ENUM "ENUM"
+
+' Define enums as notes for clarity
+enum UserRole {
+  Parent
+  Teacher
+  Admin
+}
+
+enum EnrollmentStatus {
+  Enrolled
+  Transferred
+  Withdrawn
+}
+
+enum AppointmentStatus {
+  Scheduled
+  Completed
+  Cancelled
+}
+
+' Users Table
+class Users {
+    + GUID UserID <<PK>>
+    + NVARCHAR Email
+    + NVARCHAR PasswordHash
+    + NVARCHAR FirstName
+    + NVARCHAR LastName
+    + UserRole Role
+    + DATETIME2 CreatedAt
+    + DATETIME2 UpdatedAt
+}
+
+' Parents Table
+class Parents {
+    + GUID ParentID <<PK, FK>>
+    + NVARCHAR ContactNumber
+    + NVARCHAR Address
+}
+
+' Teachers Table
+class Teachers {
+    + GUID TeacherID <<PK, FK>>
+    + NVARCHAR ContactNumber
+    + NVARCHAR SubjectsTaught
+}
+
+' Admins Table
+class Admins {
+    + GUID AdminID <<PK, FK>>
+    + NVARCHAR ContactNumber
+}
+
+' Schools Table
+class Schools {
+    + GUID SchoolID <<PK>>
+    + NVARCHAR Name
+    + NVARCHAR Address
+    + NVARCHAR ContactNumber
+    + VARBINARY Logo
+    + DATETIME2 CreatedAt
+    + DATETIME2 UpdatedAt
+}
+
+' Grades Table
+class Grades {
+    + GUID GradeID <<PK>>
+    + GUID SchoolID <<FK>>
+    + INT GradeLevel
+    + NVARCHAR Description
+}
+
+' AcademicPeriods Table
+class AcademicPeriods {
+    + GUID AcademicPeriodID <<PK>>
+    + GUID SchoolID <<FK>>
+    + NVARCHAR Name
+    + DATE StartDate
+    + DATE EndDate
+}
+
+' Classes Table
+class Classes {
+    + GUID ClassID <<PK>>
+    + GUID GradeID <<FK>>
+    + GUID AcademicPeriodID <<FK>>
+    + NVARCHAR Name
+    + NVARCHAR Description
+}
+
+' TeacherAssignments Table
+class TeacherAssignments {
+    + GUID TeacherAssignmentID <<PK>>
+    + GUID TeacherID <<FK>>
+    + GUID ClassID <<FK>>
+    + DATETIME2 AssignedAt
+}
+
+' Students Table
+class Students {
+    + GUID StudentID <<PK>>
+    + NVARCHAR FirstName
+    + NVARCHAR LastName
+    + NVARCHAR ContactNumber
+    + NVARCHAR Email
+    + GUID ClassID <<FK>>
+    + EnrollmentStatus EnrollmentStatus
+    + DATETIME2 CreatedAt
+    + DATETIME2 UpdatedAt
+}
+
+' ParentStudentLinks Table
+class ParentStudentLinks {
+    + GUID ParentID <<FK>>
+    + GUID StudentID <<FK>>
+    + DATETIME2 LinkedAt
+}
+
+' SchedulingPeriods Table
+class SchedulingPeriods {
+    + GUID SchedulingPeriodID <<PK>>
+    + GUID AcademicPeriodID <<FK>>
+    + NVARCHAR Name
+    + DATE StartDate
+    + DATE EndDate
+    + DATETIME2 CreatedAt
+    + DATETIME2 UpdatedAt
+}
+
+' ScheduleDates Table
+class ScheduleDates {
+    + GUID ScheduleDateID <<PK>>
+    + GUID SchedulingPeriodID <<FK>>
+    + DATE ScheduleDate
+    + DATETIME2 CreatedAt
+    + DATETIME2 UpdatedAt
+}
+
+' Batches Table
+class Batches {
+    + GUID BatchID <<PK>>
+    + GUID ScheduleDateID <<FK>>
+    + INT DayNumber
+    + INT BatchNumber
+    + TIME StartTime
+    + TIME EndTime
+}
+
+' Slots Table
+class Slots {
+    + GUID SlotID <<PK>>
+    + GUID BatchID <<FK>>
+    + INT SlotNumber
+    + BIT IsAvailable
+}
+
+' Appointments Table
+class Appointments {
+    + GUID AppointmentID <<PK>>
+    + GUID ParentID <<FK>>
+    + GUID TeacherID <<FK>>
+    + GUID SlotID <<FK>>
+    + GUID SchedulingPeriodID <<FK>>
+    + GUID ClassID <<FK>>
+    + AppointmentStatus Status
+    + DATETIME2 CreatedAt
+    + DATETIME2 UpdatedAt
+}
+
+' ParentPreferences Table
+class ParentPreferences {
+    + GUID PreferenceID <<PK>>
+    + GUID ParentID <<FK>>
+    + GUID BatchID <<FK>>
+    + INT SlotNumber
+    + INT PreferenceRank
+}
+
+' Waitlists Table
+class Waitlists {
+    + GUID WaitlistID <<PK>>
+    + GUID ParentID <<FK>>
+    + GUID SlotID <<FK>>
+    + INT Position
+    + DATETIME2 CreatedAt
+}
+
+' UserPermissions Table
+class UserPermissions {
+    + GUID PermissionID <<PK>>
+    + Role VARCHAR(20) <<FK>>
+    + NVARCHAR Permission
+    + NVARCHAR Description
+}
+
+' Relationships
+
+' Users to Parents, Teachers, Admins
+Users "1" --> "0..1" Parents : has
+Users "1" --> "0..1" Teachers : has
+Users "1" --> "0..1" Admins : has
+
+' Schools to Grades and AcademicPeriods
+Schools "1" --> "0..*" Grades : contains
+Schools "1" --> "0..*" AcademicPeriods : defines
+
+' Grades to Classes
+Grades "1" --> "0..*" Classes : includes
+
+' AcademicPeriods to Classes and SchedulingPeriods
+AcademicPeriods "1" --> "0..*" Classes : includes
+AcademicPeriods "1" --> "0..*" SchedulingPeriods : defines
+
+' Classes to TeacherAssignments and Students
+Classes "1" --> "0..*" TeacherAssignments : has
+Classes "1" --> "0..*" Students : contains
+
+' TeacherAssignments to Teachers and Classes
+TeacherAssignments "1" --> "1" Teachers : assigns
+TeacherAssignments "1" --> "1" Classes : to
+
+' Students to ParentStudentLinks
+Students "1" --> "0..*" ParentStudentLinks : linked_to
+Parents "1" --> "0..*" ParentStudentLinks : linked_with
+
+' SchedulingPeriods to ScheduleDates
+SchedulingPeriods "1" --> "0..*" ScheduleDates : includes
+
+' ScheduleDates to Batches
+ScheduleDates "1" --> "0..*" Batches : divided_into
+
+' Batches to Slots and ParentPreferences
+Batches "1" --> "0..*" Slots : contains
+Batches "1" --> "0..*" ParentPreferences : preferred_by
+
+' Slots to Appointments and Waitlists
+Slots "1" --> "0..1" Appointments : assigned_to
+Slots "1" --> "0..*" Waitlists : for
+
+' Appointments to Parents, Teachers, Slots, SchedulingPeriods, Classes
+Appointments "1" --> "1" Parents : booked_by
+Appointments "1" --> "1" Teachers : with
+Appointments "1" --> "1" Slots : in
+Appointments "1" --> "1" SchedulingPeriods : during
+Appointments "1" --> "1" Classes : for
+
+' ParentPreferences to Parents and Batches
+ParentPreferences "1" --> "1" Parents : preferences_of
+ParentPreferences "1" --> "1" Batches : for
+
+' Waitlists to Parents and Slots
+Waitlists "1" --> "1" Parents : waitlisted
+Waitlists "1" --> "1" Slots : for
+
+' UserPermissions to UserRole
+UserPermissions "1" --> "1" UserRole : for
+@enduml
