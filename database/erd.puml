@@ -16,6 +16,7 @@ enum EnrollmentStatus {
 }
 
 enum AppointmentStatus {
+  Requested
   Scheduled
   Completed
   Cancelled
